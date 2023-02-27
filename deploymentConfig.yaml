@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: mediawiki
+  name: mediawiki
+spec:
+  replicas: 1
+  selector:
+    app: mediawiki
+    deploymentconfig: mediawiki
+  strategy:
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: mediawiki
+        deploymentconfig: mediawiki
+    spec:
+      volumes:
+        -
+          name: mediawiki
+          persistentVolumeClaim:
+            claimName: appConfig
+	 secret:
+	     secretName: mediawiki-keystore-truststore-secret
+      containers:
+      - image: mediawiki/mediawiki:latest
+        imagePullPolicy: Always
+        name: mediawiki
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+            -
+              name: mediawiki
+              mountPath: /data
+        terminationMessagePath: /dev/termination-log
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - mediawiki
+      from:
+        kind: ImageStreamTag
+        name: mediawiki:latest
+    type: ImageChange
